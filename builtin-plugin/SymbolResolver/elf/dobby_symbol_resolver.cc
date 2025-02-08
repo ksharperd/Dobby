@@ -12,6 +12,8 @@
 
 #include <vector>
 
+#include <android/log.h>
+
 #undef LOG_TAG
 #define LOG_TAG "DobbySymbolResolver"
 
@@ -71,11 +73,20 @@ int elf_ctx_init(elf_ctx_t *ctx, void *header_) {
 
   ElfW(Addr) ehdr_addr = (ElfW(Addr))ehdr;
 
+  if (ehdr->e_phoff > sizeof(ElfW(Ehdr)) || ehdr->e_phnum == 0) {
+    __android_log_print(ANDROID_LOG_ERROR, LOG_TAG, "Invalid elf header.");
+    return 0;
+  }
+
   // Handle dynamic segment
   {
     ElfW(Addr) addr = 0;
     ElfW(Dyn) *dyn = NULL;
     ElfW(Phdr) *phdr = reinterpret_cast<ElfW(Phdr) *>(ehdr_addr + ehdr->e_phoff);
+    if (phdr == NULL) {
+      __android_log_print(ANDROID_LOG_ERROR, LOG_TAG, "Invalid program header.");
+      return 0;
+    }
     for (size_t i = 0; i < ehdr->e_phnum; i++) {
       if (phdr[i].p_type == PT_DYNAMIC) {
         dyn = reinterpret_cast<ElfW(Dyn) *>(ehdr_addr + phdr[i].p_offset);
